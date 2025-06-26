@@ -32,7 +32,7 @@ function startSimulation(device) {
         simulators[device.id] = setInterval(() => {
             const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
             const hum = device.fixed ? device.humidity : (Math.random() * (device.maxH - device.minH) + device.minH);
-            const ds = device.fixed ? device.dsTemperature : (Math.random() * 5 + 20);
+            const ds = device.fixed ? device.dsTemperature : (Math.random() * (device.maxDsT - device.minDsT) + device.minDsT);
 
             const payload = {
                 username: device.username,
@@ -70,6 +70,8 @@ app.post('/add', (req, res) => {
         maxT: parseFloat(req.body.maxT),
         minH: parseFloat(req.body.minH),
         maxH: parseFloat(req.body.maxH),
+        minDsT: parseFloat(req.body.minDsT),
+        maxDsT: parseFloat(req.body.maxDsT),
         fixed: req.body.fixed === 'on',
         temperature: parseFloat(req.body.temperature), // DHT22
         humidity: parseFloat(req.body.humidity),
