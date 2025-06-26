@@ -16,7 +16,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 if (!fs.existsSync(DEVICES_FILE)) fs.writeFileSync(DEVICES_FILE, '[]');
 
-let simulators = {}; // Store intervals per device
+let simulators = {}; // Store intervals for each device
 
 function loadDevices() {
     return JSON.parse(fs.readFileSync(DEVICES_FILE));
@@ -61,6 +61,45 @@ app.get('/', (req, res) => {
     res.render('index', { devices });
 });
 
+app.get('/edit/:id', (req, res) => {
+    const devices = loadDevices();
+    const device = devices.find(d => d.id === req.params.id);
+    if (!device) return res.status(404).send('Device not found');
+    res.render('edit', { device });
+});
+
+app.post('/update/:id', (req, res) => {
+    let devices = loadDevices();
+    const idx = devices.findIndex(d => d.id === req.params.id);
+    if (idx === -1) return res.status(404).send('Device not found');
+
+    const updated = {
+        ...devices[idx],
+        username: req.body.username,
+        minT: parseFloat(req.body.minT),
+        maxT: parseFloat(req.body.maxT),
+        minH: parseFloat(req.body.minH),
+        maxH: parseFloat(req.body.maxH),
+        minDsT: parseFloat(req.body.minDsT),
+        maxDsT: parseFloat(req.body.maxDsT),
+        fixed: req.body.fixed === 'on',
+        temperature: parseFloat(req.body.temperature),
+        humidity: parseFloat(req.body.humidity),
+        dsTemperature: parseFloat(req.body.dsTemperature),
+        interval: parseInt(req.body.interval)
+    };
+
+    devices[idx] = updated;
+    saveDevices(devices);
+
+    if (updated.running) {
+        stopSimulation(updated.id);
+        startSimulation(updated);
+    }
+
+    res.redirect('/');
+});
+
 app.post('/add', (req, res) => {
     const devices = loadDevices();
     const newDevice = {
@@ -73,9 +112,9 @@ app.post('/add', (req, res) => {
         minDsT: parseFloat(req.body.minDsT),
         maxDsT: parseFloat(req.body.maxDsT),
         fixed: req.body.fixed === 'on',
-        temperature: parseFloat(req.body.temperature), // DHT22
+        temperature: parseFloat(req.body.temperature),
         humidity: parseFloat(req.body.humidity),
-        dsTemperature: parseFloat(req.body.dsTemperature), // DS18B20
+        dsTemperature: parseFloat(req.body.dsTemperature),
         interval: parseInt(req.body.interval),
         running: true
     };
@@ -104,9 +143,9 @@ app.post('/delete/:id', (req, res) => {
     res.redirect('/');
 });
 
-// Start existing simulations on startup
+// Start simulations on server boot
 loadDevices().forEach(device => {
     if (device.running) startSimulation(device);
 });
 
-app.listen(PORT, () => console.log(`🟢 Simulador iniciado en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🟢 Simulator running at http://localhost:${PORT}`));
