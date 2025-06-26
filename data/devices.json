@@ -1,7 +1,7 @@
 [
   {
     "id": "c1025d6a-8994-4153-b6f2-7bc497090304",
-    "username": "simu02",
+    "username": "simu02 - fixed",
     "minT": null,
     "maxT": null,
     "minH": null,
@@ -11,11 +11,13 @@
     "humidity": 85,
     "dsTemperature": 5,
     "interval": 2000,
-    "running": true
+    "running": true,
+    "minDsT": null,
+    "maxDsT": null
   },
   {
     "id": "526951f6-a6c0-49cc-a614-599a6cdde645",
-    "username": "simu03",
+    "username": "simu03 - random",
     "minT": 5,
     "maxT": 6,
     "minH": 80,
