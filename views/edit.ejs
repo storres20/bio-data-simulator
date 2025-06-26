@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Device - MHUTEMP</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f4f4f4;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 640px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        label {
+            font-weight: bold;
+            margin-top: 0.5rem;
+            display: block;
+        }
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input[type="checkbox"] {
+            margin-top: 0.5rem;
+        }
+        button {
+            padding: 0.5rem 1.5rem;
+            margin-top: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>✏️ Edit Simulated Device</h1>
+    <form action="/update/<%= device.id %>" method="POST">
+        <label>Username:</label>
+        <input type="text" name="username" value="<%= device.username %>" required>
+
+        <div id="rangeFields">
+            <label>Min Temperature (Temp.OUT):</label>
+            <input type="number" step="0.01" name="minDsT" value="<%= device.minDsT %>" required>
+
+            <label>Max Temperature (Temp.OUT):</label>
+            <input type="number" step="0.01" name="maxDsT" value="<%= device.maxDsT %>" required>
+
+            <label>Min Temperature (Temp.IN):</label>
+            <input type="number" step="0.01" name="minT" value="<%= device.minT %>" required>
+
+            <label>Max Temperature (Temp.IN):</label>
+            <input type="number" step="0.01" name="maxT" value="<%= device.maxT %>" required>
+
+            <label>Min Humidity (Hum.IN):</label>
+            <input type="number" step="0.01" name="minH" value="<%= device.minH %>" required>
+
+            <label>Max Humidity (Hum.IN):</label>
+            <input type="number" step="0.01" name="maxH" value="<%= device.maxH %>" required>
+        </div>
+
+        <label><input type="checkbox" name="fixed" id="fixedMode" <%= device.fixed ? 'checked' : '' %>> Fixed Mode</label>
+
+        <div id="fixedFields" style="display:none;">
+            <label>Fixed Temperature (Temp.OUT):</label>
+            <input type="number" step="0.01" name="dsTemperature" value="<%= device.dsTemperature %>">
+
+            <label>Fixed Temperature (Temp.IN):</label>
+            <input type="number" step="0.01" name="temperature" value="<%= device.temperature %>">
+
+            <label>Fixed Humidity (Hum.IN):</label>
+            <input type="number" step="0.01" name="humidity" value="<%= device.humidity %>">
+        </div>
+
+        <label>Simulation Interval (ms):</label>
+        <input type="number" name="interval" value="<%= device.interval %>" required>
+
+        <button type="submit">Save Changes</button>
+
+        <a href="/" style="margin-left: 1rem; text-decoration: none;">
+            <button type="button" style="background-color: #ccc; color: #333;">Cancel</button>
+        </a>
+    </form>
+</div>
+
+<script>
+    const fixedCheckbox = document.getElementById('fixedMode');
+    const fixedFields = document.getElementById('fixedFields');
+    const rangeFields = document.getElementById('rangeFields');
+    const requiredRangeInputs = rangeFields.querySelectorAll('input');
+
+    function toggleFields() {
+        if (fixedCheckbox.checked) {
+            fixedFields.style.display = 'block';
+            rangeFields.style.display = 'none';
+            requiredRangeInputs.forEach(input => input.removeAttribute('required'));
+        } else {
+            fixedFields.style.display = 'none';
+            rangeFields.style.display = 'block';
+            requiredRangeInputs.forEach(input => input.setAttribute('required', 'required'));
+        }
+    }
+
+    fixedCheckbox.addEventListener('change', toggleFields);
+    toggleFields(); // run on page load
+</script>
+</body>
+</html>
