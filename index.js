@@ -23,10 +23,13 @@ mongoose.connection.once('open', () => console.log('✅ Connected to MongoDB'));
 let simulators = {}; // Active simulators
 
 function startSimulation(sim) {
+    // Forzar limpieza previa si ya existe
     if (simulators[sim._id]) {
-        console.log(`[${sim.username}] 🔁 Ya hay un simulador activo. Se omite.`);
-        return;
+        console.warn(`[${sim.username}] 🧹 Simulador previo detectado. Reiniciando...`);
+        stopSimulation(sim._id);
     }
+
+    console.log(`[${sim.username}] ⚙️ Iniciando nuevo simulador con intervalo ${sim.interval} ms...`);
 
     let ws;
     let sendInterval = null;
@@ -64,15 +67,14 @@ function startSimulation(sim) {
             }, 25000);
 
             simulators[sim._id] = { ws, sendInterval, pingInterval };
+            console.log(`[${sim.username}] 🚀 Simulador iniciado y registrado`);
         });
 
         ws.on('pong', () => console.log(`[${sim.username}] 📶 Pong recibido`));
 
         ws.on('close', async () => {
-            console.warn(`[${sim.username}] ⚠️ WebSocket cerrado. Verificando existencia en DB...`);
-            clearInterval(sendInterval);
-            clearInterval(pingInterval);
-            delete simulators[sim._id];
+            console.warn(`[${sim.username}] ⚠️ WebSocket cerrado`);
+            stopSimulation(sim._id);
 
             const stillExists = await Simulation.exists({ _id: sim._id });
             if (stillExists) {
@@ -94,10 +96,21 @@ function stopSimulation(id) {
     if (sim) {
         clearInterval(sim.sendInterval);
         clearInterval(sim.pingInterval);
-        if (sim.ws && sim.ws.readyState === WebSocket.OPEN) {
-            sim.ws.close();
+
+        if (sim.ws) {
+            try {
+                sim.ws.terminate(); // cierre inmediato
+                console.log(`[${id}] 🔌 WebSocket terminado por stopSimulation`);
+            } catch (e) {
+                console.error(`[${id}] ⚠️ Error al terminar WS: ${e.message}`);
+            }
         }
+
+        console.log(`[${id}] 🧹 Simulador detenido y removido de memoria`);
+    } else {
+        console.log(`[${id}] ⚠️ No se encontró simulador activo en memoria`);
     }
+
     delete simulators[id];
 }
 
