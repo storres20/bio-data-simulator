@@ -37,7 +37,6 @@ function startSimulation(device) {
         ws.on('open', () => {
             console.log(`[${device.username}] ✅ WebSocket conectado`);
 
-            // Enviar datos simulados
             sendInterval = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
@@ -56,13 +55,18 @@ function startSimulation(device) {
                 }
             }, device.interval);
 
-            // Ping cada 25 segundos
             pingInterval = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.ping();
                     console.log(`[${device.username}] 📤 Ping enviado`);
                 }
             }, 25000);
+
+            simulators[device.id] = {
+                ws,
+                sendInterval,
+                pingInterval
+            };
         });
 
         ws.on('pong', () => {
@@ -73,8 +77,8 @@ function startSimulation(device) {
             console.warn(`[${device.username}] ⚠️ WebSocket cerrado. Reintentando en 5s...`);
             clearInterval(sendInterval);
             clearInterval(pingInterval);
-            simulators[device.id] = null;
-            setTimeout(connect, 5000); // Reconexión
+            delete simulators[device.id];
+            setTimeout(connect, 5000);
         });
 
         ws.on('error', (err) => {
@@ -83,11 +87,17 @@ function startSimulation(device) {
     };
 
     connect();
-    simulators[device.id] = true;
 }
 
 function stopSimulation(id) {
-    simulators[id] = null;
+    const sim = simulators[id];
+    if (sim) {
+        clearInterval(sim.sendInterval);
+        clearInterval(sim.pingInterval);
+        if (sim.ws && sim.ws.readyState === WebSocket.OPEN) {
+            sim.ws.close();
+        }
+    }
     delete simulators[id];
 }
 
