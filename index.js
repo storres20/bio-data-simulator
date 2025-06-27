@@ -27,6 +27,11 @@ function saveDevices(devices) {
 }
 
 function startSimulation(device) {
+    if (simulators[device.id]) {
+        console.log(`[${device.username}] 🔁 Ya hay un simulador activo. Se omite.`);
+        return;
+    }
+
     let ws;
     let sendInterval = null;
     let pingInterval = null;
