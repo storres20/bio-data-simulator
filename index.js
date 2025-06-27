@@ -39,19 +39,19 @@ function startSimulation(device) {
 
             // Enviar datos simulados
             sendInterval = setInterval(() => {
-                const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
-                const hum = device.fixed ? device.humidity : (Math.random() * (device.maxH - device.minH) + device.minH);
-                const ds = device.fixed ? device.dsTemperature : (Math.random() * (device.maxDsT - device.minDsT) + device.minDsT);
-
-                const payload = {
-                    username: device.username,
-                    dsTemperature: parseFloat(ds.toFixed(2)),
-                    temperature: parseFloat(temp.toFixed(2)),
-                    humidity: parseFloat(hum.toFixed(2)),
-                    datetime: new Date().toISOString()
-                };
-
                 if (ws.readyState === WebSocket.OPEN) {
+                    const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
+                    const hum = device.fixed ? device.humidity : (Math.random() * (device.maxH - device.minH) + device.minH);
+                    const ds = device.fixed ? device.dsTemperature : (Math.random() * (device.maxDsT - device.minDsT) + device.minDsT);
+
+                    const payload = {
+                        username: device.username,
+                        dsTemperature: parseFloat(ds.toFixed(2)),
+                        temperature: parseFloat(temp.toFixed(2)),
+                        humidity: parseFloat(hum.toFixed(2)),
+                        datetime: new Date().toISOString()
+                    };
+
                     ws.send(JSON.stringify(payload));
                 }
             }, device.interval);
