@@ -16,7 +16,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 if (!fs.existsSync(DEVICES_FILE)) fs.writeFileSync(DEVICES_FILE, '[]');
 
-let simulators = {}; // Store intervals for each device
+let simulators = {}; // Stores active simulators by device ID
 
 function loadDevices() {
     return JSON.parse(fs.readFileSync(DEVICES_FILE));
@@ -27,31 +27,67 @@ function saveDevices(devices) {
 }
 
 function startSimulation(device) {
-    const ws = new WebSocket('wss://bio-data-production.up.railway.app');
-    ws.on('open', () => {
-        simulators[device.id] = setInterval(() => {
-            const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
-            const hum = device.fixed ? device.humidity : (Math.random() * (device.maxH - device.minH) + device.minH);
-            const ds = device.fixed ? device.dsTemperature : (Math.random() * (device.maxDsT - device.minDsT) + device.minDsT);
+    let ws;
+    let sendInterval = null;
+    let pingInterval = null;
 
-            const payload = {
-                username: device.username,
-                dsTemperature: parseFloat(ds.toFixed(2)),
-                temperature: parseFloat(temp.toFixed(2)),
-                humidity: parseFloat(hum.toFixed(2)),
-                datetime: new Date().toISOString()
-            };
-            ws.send(JSON.stringify(payload));
-        }, device.interval);
-    });
-    ws.on('close', () => {
-        clearInterval(simulators[device.id]);
-        delete simulators[device.id];
-    });
+    const connect = () => {
+        ws = new WebSocket('wss://bio-data-production.up.railway.app');
+
+        ws.on('open', () => {
+            console.log(`[${device.username}] ✅ WebSocket conectado`);
+
+            // Enviar datos simulados
+            sendInterval = setInterval(() => {
+                const temp = device.fixed ? device.temperature : (Math.random() * (device.maxT - device.minT) + device.minT);
+                const hum = device.fixed ? device.humidity : (Math.random() * (device.maxH - device.minH) + device.minH);
+                const ds = device.fixed ? device.dsTemperature : (Math.random() * (device.maxDsT - device.minDsT) + device.minDsT);
+
+                const payload = {
+                    username: device.username,
+                    dsTemperature: parseFloat(ds.toFixed(2)),
+                    temperature: parseFloat(temp.toFixed(2)),
+                    humidity: parseFloat(hum.toFixed(2)),
+                    datetime: new Date().toISOString()
+                };
+
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(payload));
+                }
+            }, device.interval);
+
+            // Ping cada 25 segundos
+            pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.ping();
+                    console.log(`[${device.username}] 📤 Ping enviado`);
+                }
+            }, 25000);
+        });
+
+        ws.on('pong', () => {
+            console.log(`[${device.username}] 📶 Pong recibido`);
+        });
+
+        ws.on('close', () => {
+            console.warn(`[${device.username}] ⚠️ WebSocket cerrado. Reintentando en 5s...`);
+            clearInterval(sendInterval);
+            clearInterval(pingInterval);
+            simulators[device.id] = null;
+            setTimeout(connect, 5000); // Reconexión
+        });
+
+        ws.on('error', (err) => {
+            console.error(`[${device.username}] ❌ Error: ${err.message}`);
+        });
+    };
+
+    connect();
+    simulators[device.id] = true;
 }
 
 function stopSimulation(id) {
-    clearInterval(simulators[id]);
+    simulators[id] = null;
     delete simulators[id];
 }
 
@@ -143,7 +179,7 @@ app.post('/delete/:id', (req, res) => {
     res.redirect('/');
 });
 
-// Start simulations on server boot
+// Iniciar simulaciones activas al arrancar el servidor
 loadDevices().forEach(device => {
     if (device.running) startSimulation(device);
 });
