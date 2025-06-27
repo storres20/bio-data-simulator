@@ -67,13 +67,22 @@ function startSimulation(sim) {
         });
 
         ws.on('pong', () => console.log(`[${sim.username}] 📶 Pong recibido`));
-        ws.on('close', () => {
-            console.warn(`[${sim.username}] ⚠️ WebSocket cerrado. Reintentando en 5s...`);
+
+        ws.on('close', async () => {
+            console.warn(`[${sim.username}] ⚠️ WebSocket cerrado. Verificando existencia en DB...`);
             clearInterval(sendInterval);
             clearInterval(pingInterval);
             delete simulators[sim._id];
-            setTimeout(connect, 5000);
+
+            const stillExists = await Simulation.exists({ _id: sim._id });
+            if (stillExists) {
+                console.log(`[${sim.username}] 🔄 Simulador existe. Reintentando conexión en 5s...`);
+                setTimeout(connect, 5000);
+            } else {
+                console.log(`[${sim.username}] 🧹 Simulador eliminado. No se reconecta.`);
+            }
         });
+
         ws.on('error', err => console.error(`[${sim.username}] ❌ Error: ${err.message}`));
     };
 
