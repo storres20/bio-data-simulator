@@ -212,6 +212,23 @@ app.post('/delete/:id', async (req, res) => {
     res.redirect('/');
 });
 
+app.post('/log-active', (req, res) => {
+    const activeIds = Object.keys(simulators);
+
+    if (activeIds.length === 0) {
+        console.log('📭 No hay simuladores activos en memoria');
+    } else {
+        console.log(`📋 Simuladores activos (${activeIds.length}):`);
+        activeIds.forEach(id => {
+            const sim = simulators[id];
+            console.log(`🟢 ID: ${id} | Ping activo: ${!!sim.pingInterval} | Username: ${(sim?.ws?.url || 'N/A')}`);
+        });
+    }
+
+    res.redirect('/');
+});
+
+
 // Iniciar simulaciones activas al arrancar el servidor
 mongoose.connection.once('open', async () => {
     const active = await Simulation.find({ running: true });
