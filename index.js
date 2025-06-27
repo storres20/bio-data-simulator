@@ -20,7 +20,7 @@ app.set('views', path.join(__dirname, 'views'));
 mongoose.connect(process.env.DATABASE_URL, { dbName: 'bio-data' });
 mongoose.connection.once('open', () => console.log('✅ Connected to MongoDB'));
 
-let simulators = {}; // Stores active simulators by simulation ID
+let simulators = {}; // Active simulators
 
 function startSimulation(sim) {
     if (simulators[sim._id]) {
@@ -92,6 +92,18 @@ function stopSimulation(id) {
     delete simulators[id];
 }
 
+async function cleanupOrphanSimulators() {
+    const dbSims = await Simulation.find().select('_id');
+    const dbIds = dbSims.map(sim => sim._id.toString());
+
+    Object.keys(simulators).forEach(id => {
+        if (!dbIds.includes(id)) {
+            console.warn(`🧹 Simulador huérfano detectado y detenido: ${id}`);
+            stopSimulation(id);
+        }
+    });
+}
+
 // Routes
 app.get('/', async (req, res) => {
     const devices = await Simulation.find();
@@ -127,6 +139,7 @@ app.post('/update/:id', async (req, res) => {
 
     stopSimulation(updated._id);
     startSimulation(updated);
+    await cleanupOrphanSimulators();
     res.redirect('/');
 });
 
@@ -148,12 +161,14 @@ app.post('/add', async (req, res) => {
     });
     const saved = await sim.save();
     startSimulation(saved);
+    await cleanupOrphanSimulators();
     res.redirect('/');
 });
 
 app.post('/stop/:id', async (req, res) => {
     await Simulation.findByIdAndUpdate(req.params.id, { running: false });
     stopSimulation(req.params.id);
+    await cleanupOrphanSimulators();
     res.redirect('/');
 });
 
@@ -164,12 +179,14 @@ app.post('/start/:id', async (req, res) => {
         { new: true }
     );
     if (sim) startSimulation(sim);
+    await cleanupOrphanSimulators();
     res.redirect('/');
 });
 
 app.post('/delete/:id', async (req, res) => {
     await Simulation.findByIdAndDelete(req.params.id);
     stopSimulation(req.params.id);
+    await cleanupOrphanSimulators();
     res.redirect('/');
 });
 
