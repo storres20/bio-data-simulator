@@ -155,13 +155,19 @@
 
     <h2>📋 Simulated Devices</h2>
 
-    <form action="/log-active" method="POST">
-        <button type="submit" style="background-color: orange; color: white; padding: 8px 16px; border: none; border-radius: 4px;">
-            📋 Ver simuladores activos
+    <button onclick="logSimulators()" style="background-color: orange; color: white; padding: 8px 16px; border: none; border-radius: 4px;">
+        📋 Ver simuladores activos (consola)
+    </button>
+
+    <!-- 🔥 Botón para eliminar todos los simuladores -->
+    <form action="/delete-all" method="POST" onsubmit="return confirm('¿Eliminar TODOS los simuladores activos? Esta acción es irreversible.')">
+        <button style="background-color: crimson; color: white; padding: 8px 16px; border: none; border-radius: 4px; margin-top: 1rem;">
+            🗑️ Eliminar TODOS los simuladores
         </button>
     </form>
 
-    <% if (devices.length === 0) { %>
+
+<% if (devices.length === 0) { %>
         <p>No devices currently running.</p>
     <% } else { %>
         <% devices.forEach(device => { %>
@@ -223,6 +229,17 @@
 
     fixedCheckbox.addEventListener('change', toggleFields);
     toggleFields();
+
+    function logSimulators() {
+        fetch('/log-active', {
+            method: 'POST'
+        }).then(() => {
+            alert('✅ Ver consola del servidor');
+        }).catch(err => {
+            alert('❌ Error al intentar consultar simuladores');
+            console.error(err);
+        });
+    }
 </script>
 </body>
 </html>

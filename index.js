@@ -1,10 +1,8 @@
-// index.js
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
 
 const Simulation = require('./models/simulation.model');
 
@@ -23,7 +21,6 @@ mongoose.connection.once('open', () => console.log('✅ Connected to MongoDB'));
 let simulators = {}; // Active simulators
 
 function startSimulation(sim) {
-    // Forzar limpieza previa si ya existe
     if (simulators[sim._id]) {
         console.warn(`[${sim.username}] 🧹 Simulador previo detectado. Reiniciando...`);
         stopSimulation(sim._id);
@@ -66,7 +63,9 @@ function startSimulation(sim) {
                 }
             }, 25000);
 
-            simulators[sim._id] = { ws, sendInterval, pingInterval };
+            //simulators[sim._id] = { ws, sendInterval, pingInterval };
+            simulators[sim._id] = { ws, sendInterval, pingInterval, username: sim.username };
+
             console.log(`[${sim.username}] 🚀 Simulador iniciado y registrado`);
         });
 
@@ -99,19 +98,18 @@ function stopSimulation(id) {
 
         if (sim.ws) {
             try {
-                sim.ws.terminate(); // cierre inmediato
-                console.log(`[${id}] 🔌 WebSocket terminado por stopSimulation`);
+                sim.ws.close(); // ✅ cierre limpio
+                console.log(`[${id}] 🔌 WebSocket cerrado limpiamente`);
             } catch (e) {
-                console.error(`[${id}] ⚠️ Error al terminar WS: ${e.message}`);
+                console.error(`[${id}] ⚠️ Error al cerrar WebSocket: ${e.message}`);
             }
         }
 
+        delete simulators[id];
         console.log(`[${id}] 🧹 Simulador detenido y removido de memoria`);
     } else {
         console.log(`[${id}] ⚠️ No se encontró simulador activo en memoria`);
     }
-
-    delete simulators[id];
 }
 
 async function cleanupOrphanSimulators() {
@@ -139,6 +137,19 @@ app.get('/edit/:id', async (req, res) => {
 });
 
 app.post('/update/:id', async (req, res) => {
+    const original = await Simulation.findById(req.params.id); // 🧠 Antes de actualizar
+
+    // 🚫 Detener simulador por ID y también por username anterior
+    stopSimulation(original._id);
+
+    for (const id in simulators) {
+        const sim = simulators[id];
+        if (sim.username === original.username && id !== original._id.toString()) {
+            console.log(`[${original.username}] 🔥 WebSocket zombie detectado. Eliminando...`);
+            stopSimulation(id);
+        }
+    }
+
     const updated = await Simulation.findByIdAndUpdate(
         req.params.id,
         {
@@ -159,7 +170,6 @@ app.post('/update/:id', async (req, res) => {
         { new: true }
     );
 
-    stopSimulation(updated._id);
     startSimulation(updated);
     await cleanupOrphanSimulators();
     res.redirect('/');
@@ -212,24 +222,39 @@ app.post('/delete/:id', async (req, res) => {
     res.redirect('/');
 });
 
-app.post('/log-active', (req, res) => {
-    const activeIds = Object.keys(simulators);
-
-    if (activeIds.length === 0) {
-        console.log('📭 No hay simuladores activos en memoria');
-    } else {
-        console.log(`📋 Simuladores activos (${activeIds.length}):`);
-        activeIds.forEach(id => {
-            const sim = simulators[id];
-            console.log(`🟢 ID: ${id} | Ping activo: ${!!sim.pingInterval} | Username: ${(sim?.ws?.url || 'N/A')}`);
-        });
+// ✅ Ruta adicional: eliminar todos los simuladores activos
+app.post('/delete-all', async (req, res) => {
+    const sims = await Simulation.find();
+    for (const sim of sims) {
+        stopSimulation(sim._id);
     }
-
+    await Simulation.deleteMany({});
+    console.log('🗑️ Todos los simuladores eliminados');
     res.redirect('/');
 });
 
+app.post('/log-active', (req, res) => {
+    const activeIds = Object.keys(simulators);
 
-// Iniciar simulaciones activas al arrancar el servidor
+    console.log('\n📋 ==== Simuladores activos en memoria ==== ');
+    if (activeIds.length === 0) {
+        console.log('📭 No hay simuladores activos en memoria');
+    } else {
+        activeIds.forEach(id => {
+            const sim = simulators[id];
+            console.log(`🟢 ID: ${id}`);
+            console.log(`   🔗 WebSocket URL: ${sim?.ws?.url || 'N/A'}`);
+            console.log(`   ⏱️ Ping activo: ${!!sim.pingInterval}`);
+            console.log(`   ⏰ Interval activo: ${!!sim.sendInterval}`);
+            console.log(`   📡 Estado WS: ${sim?.ws?.readyState}`);
+        });
+    }
+    console.log('========================================\n');
+
+    res.status(200).send('OK');
+});
+
+// Al arrancar, iniciar simuladores activos
 mongoose.connection.once('open', async () => {
     const active = await Simulation.find({ running: true });
     active.forEach(sim => startSimulation(sim));
