@@ -38,6 +38,9 @@ function startSimulation(sim) {
         ws.on('open', () => {
             console.log(`[${sim.username}] ✅ WebSocket conectado`);
 
+            ws.send(JSON.stringify({ username: sim.username }));
+            console.log(`[${sim.username}] 📨 Username enviado tras conexión`);
+
             sendInterval = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     const temp = sim.fixed ? sim.temperature : (Math.random() * (sim.maxT - sim.minT) + sim.minT);
