@@ -130,51 +130,6 @@ app.get('/', async (req, res) => {
     res.render('index', { devices });
 });
 
-app.get('/edit/:id', async (req, res) => {
-    const device = await Simulation.findById(req.params.id);
-    if (!device) return res.status(404).send('Simulation not found');
-    res.render('edit', { device });
-});
-
-app.post('/update/:id', async (req, res) => {
-    const original = await Simulation.findById(req.params.id); // 🧠 Antes de actualizar
-
-    // 🚫 Detener simulador por ID y también por username anterior
-    stopSimulation(original._id);
-
-    for (const id in simulators) {
-        const sim = simulators[id];
-        if (sim.username === original.username && id !== original._id.toString()) {
-            console.log(`[${original.username}] 🔥 WebSocket zombie detectado. Eliminando...`);
-            stopSimulation(id);
-        }
-    }
-
-    const updated = await Simulation.findByIdAndUpdate(
-        req.params.id,
-        {
-            username: req.body.username,
-            minT: parseFloat(req.body.minT),
-            maxT: parseFloat(req.body.maxT),
-            minH: parseFloat(req.body.minH),
-            maxH: parseFloat(req.body.maxH),
-            minDsT: parseFloat(req.body.minDsT),
-            maxDsT: parseFloat(req.body.maxDsT),
-            fixed: req.body.fixed === 'on',
-            temperature: parseFloat(req.body.temperature),
-            humidity: parseFloat(req.body.humidity),
-            dsTemperature: parseFloat(req.body.dsTemperature),
-            interval: parseInt(req.body.interval),
-            running: true
-        },
-        { new: true }
-    );
-
-    startSimulation(updated);
-    await cleanupOrphanSimulators();
-    res.redirect('/');
-});
-
 app.post('/add', async (req, res) => {
     const sim = new Simulation({
         username: req.body.username,
@@ -193,24 +148,6 @@ app.post('/add', async (req, res) => {
     });
     const saved = await sim.save();
     startSimulation(saved);
-    await cleanupOrphanSimulators();
-    res.redirect('/');
-});
-
-app.post('/stop/:id', async (req, res) => {
-    await Simulation.findByIdAndUpdate(req.params.id, { running: false });
-    stopSimulation(req.params.id);
-    await cleanupOrphanSimulators();
-    res.redirect('/');
-});
-
-app.post('/start/:id', async (req, res) => {
-    const sim = await Simulation.findByIdAndUpdate(
-        req.params.id,
-        { running: true },
-        { new: true }
-    );
-    if (sim) startSimulation(sim);
     await cleanupOrphanSimulators();
     res.redirect('/');
 });
