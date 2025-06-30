@@ -187,21 +187,8 @@
                 <% } %>
 
                 <div class="actions">
-                    <% if (device.running) { %>
-                        <form action="/stop/<%= device._id %>" method="POST" onsubmit="return confirm('Stop this device?')">
-                            <button type="submit">Stop</button>
-                        </form>
-                    <% } else { %>
-                        <form action="/start/<%= device._id %>" method="POST" onsubmit="return confirm('Start this device?')">
-                            <button type="submit">Start</button>
-                        </form>
-                    <% } %>
-
                     <form action="/delete/<%= device._id %>" method="POST" onsubmit="return confirm('Delete this device?')">
                         <button type="submit">Delete</button>
-                    </form>
-                    <form action="/edit/<%= device._id %>" method="GET">
-                        <button type="submit">Edit</button>
                     </form>
                 </div>
             </div>
