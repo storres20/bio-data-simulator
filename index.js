@@ -49,9 +49,9 @@ function startSimulation(sim) {
 
                     const payload = {
                         username: sim.username,
-                        dsTemperature: parseFloat(ds.toFixed(2)),
-                        temperature: parseFloat(temp.toFixed(2)),
-                        humidity: parseFloat(hum.toFixed(2)),
+                        dsTemperature: parseFloat(ds.toFixed(1)),
+                        temperature: parseFloat(temp.toFixed(1)),
+                        humidity: Math.round(hum),
                         datetime: new Date().toISOString()
                     };
 
