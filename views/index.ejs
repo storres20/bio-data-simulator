@@ -23,6 +23,32 @@
             color: #333;
         }
 
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stats h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .stats .count {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .stats .detail {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
         form, .device {
             background: white;
             padding: 1.5rem;
@@ -38,7 +64,8 @@
         }
 
         input[type="number"],
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 0.5rem;
             margin-top: 0.25rem;
@@ -76,6 +103,48 @@
 
         .actions form {
             display: inline;
+            margin-right: 0.5rem;
+        }
+
+        .door-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .door-closed {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .door-open {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .door-unknown {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .button-group button,
+        .button-group form {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .button-group form button {
+            width: 100%;
+            margin: 0;
         }
 
         @media (max-width: 480px) {
@@ -90,6 +159,15 @@
             button {
                 width: 100%;
                 margin-top: 0.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button-group button,
+            .button-group form {
+                min-width: 100%;
             }
 
             .actions button {
@@ -107,6 +185,15 @@
 <body>
 <div class="container">
     <h1>🔧 ESP8266 Device Simulator - MHUTEMP</h1>
+
+    <div class="stats">
+        <h3>System Status</h3>
+        <div class="count"><%= devices.length %></div>
+        <div class="detail">
+            DB: <%= devices.length %> devices |
+            Memory: <%= typeof activeCount !== 'undefined' ? activeCount : devices.length %> active
+        </div>
+    </div>
 
     <form action="/add" method="POST">
         <h2>➕ Create New Simulated Device</h2>
@@ -147,6 +234,13 @@
             <input type="number" step="0.01" name="humidity" value="50">
         </div>
 
+        <label>Door Status:</label>
+        <select name="doorStatus">
+            <option value="closed" selected>🔒 Closed</option>
+            <option value="open">🔓 Open</option>
+            <option value="unknown">❓ Unknown</option>
+        </select>
+
         <label>Simulation Interval (ms):</label>
         <input type="number" name="interval" value="2000" required>
 
@@ -155,25 +249,52 @@
 
     <h2>📋 Simulated Devices</h2>
 
-    <button onclick="logSimulators()" style="background-color: orange; color: white; padding: 8px 16px; border: none; border-radius: 4px;">
-        📋 Ver simuladores activos (consola)
-    </button>
-
-    <!-- 🔥 Botón para eliminar todos los simuladores -->
-    <form action="/delete-all" method="POST" onsubmit="return confirm('¿Eliminar TODOS los simuladores activos? Esta acción es irreversible.')">
-        <button style="background-color: crimson; color: white; padding: 8px 16px; border: none; border-radius: 4px; margin-top: 1rem;">
-            🗑️ Eliminar TODOS los simuladores
+    <div class="button-group">
+        <button onclick="logSimulators()" style="background-color: orange;">
+            📋 Ver simuladores activos
         </button>
-    </form>
 
+        <form action="/force-sync" method="POST">
+            <button style="background-color: #2196F3; margin: 0;">
+                🔄 Sincronizar DB ↔ Memoria
+            </button>
+        </form>
 
-<% if (devices.length === 0) { %>
-        <p>No devices currently running.</p>
+        <form action="/delete-all" method="POST" onsubmit="return confirm('¿Eliminar TODOS los simuladores activos? Esta acción es irreversible.')">
+            <button style="background-color: crimson; margin: 0;">
+                🗑️ Eliminar TODOS
+            </button>
+        </form>
+    </div>
+
+    <% if (devices.length === 0) { %>
+        <div style="text-align: center; padding: 2rem; background: white; border-radius: 10px;">
+            <p style="color: #999; font-size: 1.2rem;">No devices currently running.</p>
+        </div>
     <% } else { %>
         <% devices.forEach(device => { %>
             <div class="device">
                 <strong><%= device.username %></strong><br>
                 <span><%= device.running ? '🟢 Sending data' : '⛔ Stopped' %></span><br>
+
+                <%
+                    let doorClass = 'door-unknown';
+                    let doorIcon = '❓';
+                    let doorText = 'Unknown';
+
+                    if (device.doorStatus === 'closed') {
+                        doorClass = 'door-closed';
+                        doorIcon = '🔒';
+                        doorText = 'Closed';
+                    } else if (device.doorStatus === 'open') {
+                        doorClass = 'door-open';
+                        doorIcon = '🔓';
+                        doorText = 'Open';
+                    }
+                %>
+
+                <span class="door-status <%= doorClass %>"><%= doorIcon %> Door: <%= doorText %></span><br><br>
+
                 🔄 Interval: <%= device.interval %> ms<br>
 
                 <% if (device.fixed) { %>
@@ -188,7 +309,7 @@
 
                 <div class="actions">
                     <form action="/delete/<%= device._id %>" method="POST" onsubmit="return confirm('Delete this device?')">
-                        <button type="submit">Delete</button>
+                        <button type="submit" style="background-color: #f44336;">Delete</button>
                     </form>
                 </div>
             </div>

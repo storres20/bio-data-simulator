@@ -2,7 +2,6 @@
 const mongoose = require('mongoose');
 
 const simulationSchema = new mongoose.Schema({
-    //id: { type: String, required: true }, // UUID
     username: { type: String, required: true },
     minT: Number,
     maxT: Number,
@@ -14,6 +13,7 @@ const simulationSchema = new mongoose.Schema({
     temperature: Number,
     humidity: Number,
     dsTemperature: Number,
+    doorStatus: { type: String, enum: ['open', 'closed', 'unknown'], default: 'closed' },
     interval: { type: Number, default: 2000 },
     running: { type: Boolean, default: true }
 });
